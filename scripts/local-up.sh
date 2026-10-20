@@ -59,4 +59,5 @@ kubectl -n "$NS" create secret docker-registry ghcr-pull \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
 echo "Done. Watch: kubectl -n argocd get applications -w"
+echo "ArgoCD UI:  http://argocd.localhost:8088   (user admin; password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 echo "App:        http://testkube-sample.localhost:8088/"

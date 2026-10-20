@@ -53,6 +53,11 @@ kubectl apply -k bootstrap/ --server-side
 kubectl -n argocd rollout status deploy/argocd-server
 ```
 
+ArgoCD UI: `http://argocd.localhost:8088` (user `admin`). `bootstrap/` sets `server.insecure` so the
+ingress can talk plain HTTP to `argocd-server`, and adds an Ingress for it. Password:
+`kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d`.
+TLS is out of scope locally; in a real cluster terminate TLS at the ingress (cert-manager).
+
 ### 4. Repository credential (the repo is private)
 
 The script creates a `repo-creds` Secret in `argocd` from `gh auth token`, valid for every repo under `github.com/vengomatto`. It is never committed.
@@ -118,5 +123,7 @@ Sync waves are ignored, so the api may restart once while the db starts.
 |---|---|---|
 | `helm lint` + `helm template` | Done | 0 failures; valid fixture renders; `bad-override-guardrail` and `bad-latest-tag` are rejected |
 | Images build locally (api 510 MB, web 1.4 GB) | Done | Run as uid 1000; web bundle contains `"/api"`, no `localhost:8080` |
-| CI build, push to GHCR, deploy PR | **Not done yet** | Needs the app repo pushed and Actions allowed to create PRs |
-| Cluster, ArgoCD, end-to-end | **Not done yet** | Needs the app repo created and pushed (`vengomatto/testkube-samples`) |
+| CI build, push to GHCR, deploy PR | Done | Deploy PR opened and merged; images pulled from private GHCR by kind |
+| Cluster, ArgoCD, end-to-end | Done | App reachable at `testkube-sample.localhost:8088`; ArgoCD Synced and Healthy |
+| PostSync smoke test | Done | `hurl`: 3 requests, 100% succeeded (triggered by a real sync) |
+| Bug found while running | Fixed | `vite preview` needs a writable dir as uid 1000; PVC template defaults caused permanent OutOfSync |

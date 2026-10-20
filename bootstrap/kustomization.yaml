@@ -1,9 +1,22 @@
-# Installs ArgoCD (pinned) and the root app. Everything after this is Git.
+# Installs ArgoCD (pinned) and exposes its UI through the ingress. Everything after
+# this is Git: the root app (argocd/root-app.yaml) is applied separately because its
+# CRD must exist first.
 #   kubectl apply -k bootstrap/ --server-side
-# Two-pass on a fresh cluster: the CRDs must exist before the root Application.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: argocd
 resources:
   - namespace.yaml
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml
+  - ingress.yaml
+patches:
+  # Plain HTTP between the ingress and argocd-server. TLS belongs at the ingress
+  # (cert-manager in a real cluster); on localhost there is nothing to protect.
+  - target: {kind: ConfigMap, name: argocd-cmd-params-cm}
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.insecure: "true"
