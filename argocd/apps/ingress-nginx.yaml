@@ -1,0 +1,32 @@
+# Platform add-on, managed by ArgoCD like everything else (no `kubectl apply` of a
+# third-party URL). Values are the kind-specific ones: hostPort on the labelled node.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-nginx
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: 4.12.1
+    helm:
+      valuesObject:
+        controller:
+          hostPort: {enabled: true}
+          service: {type: NodePort}
+          nodeSelector: {ingress-ready: "true"}
+          tolerations:
+            - {key: node-role.kubernetes.io/control-plane, operator: Equal, effect: NoSchedule}
+          admissionWebhooks: {enabled: false}   # avoids a startup race with the first Ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-nginx
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true]

@@ -1,0 +1,24 @@
+{
+  "name": "testkube-samples",
+  "version": "1.0.0",
+  "description": "A sample 3-tier application to run tests on",
+  "main": "index.js",
+  "packageManager": "npm@10.5.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "turbo run dev",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "turbo": "2.0.6"
+  }
+}

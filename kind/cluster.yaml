@@ -1,0 +1,14 @@
+# The cluster as a manifest: `kind create cluster --config kind/cluster.yaml`.
+# Host port 8088 -> ingress-nginx (node port 80). 8088 avoids needing root for
+# port 80 on macOS and avoids clashing with the api's own 8080.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: case-interview
+nodes:
+  - role: control-plane
+    labels:
+      ingress-ready: "true"   # ingress-nginx is scheduled on this node
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8088
+        protocol: TCP

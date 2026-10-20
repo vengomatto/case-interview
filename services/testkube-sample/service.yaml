@@ -1,0 +1,28 @@
+# The only file a team writes. No Kubernetes concepts: name, images, ports, paths.
+# The platform chart (platform/charts/app) renders namespace, quota, network
+# policies, deployments, services, ingress, database and smoke tests from this.
+name: testkube-sample
+host: testkube-sample.localhost
+
+components:
+  api:
+    image: ghcr.io/vengomatto/case-interview-api
+    tag: local            # CI proposes a PR that replaces this with the commit SHA
+    port: 8080
+    path: /api            # served at http://<host>/api/*, prefix stripped before the app
+    health: /hello
+    env:
+      DB_HOST: db
+      DB_PORT: "5432"
+  web:
+    image: ghcr.io/vengomatto/case-interview-web
+    tag: local
+    port: 4173
+    path: /
+    health: /
+
+database:
+  enabled: true
+
+smoke:
+  - {component: api, path: /hello-pg, contains: "hello world from postgres"}

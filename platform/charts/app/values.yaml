@@ -1,0 +1,41 @@
+# Platform defaults. A team overrides only what it needs, in services/<name>/service.yaml.
+name: ""            # required: service name, used for labels
+host: ""            # required: ingress host
+
+ingressClassName: nginx
+imagePullPolicy: IfNotPresent
+
+# Per-component defaults (merged into every entry of `components`).
+componentDefaults:
+  replicas: 2
+  path: /
+  health: /
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+
+components: {}
+
+database:
+  enabled: false
+  image: postgres:16-alpine
+  name: api-db
+  user: api-user
+  password: api-password   # demo only: real setups use External Secrets / Sealed Secrets
+  storage: 1Gi
+
+# Post-deploy checks run as an ArgoCD PostSync hook. Each component's `health`
+# path is always checked; add business checks here.
+smoke: []           # - {component: api, path: /hello-pg, contains: "hello world"}
+
+guardrails:
+  quota:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+    persistentvolumeclaims: "2"
+  limitRange:
+    default: {cpu: 250m, memory: 256Mi}
+    defaultRequest: {cpu: 50m, memory: 64Mi}
+    max: {cpu: "2", memory: 2Gi}

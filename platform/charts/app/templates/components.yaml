@@ -1,0 +1,100 @@
+{{- $wave := 20 }}
+{{- range $name, $c0 := .Values.components }}
+{{- $c := include "app.component" (dict "root" $ "c" $c0) | fromYaml }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ $c.wave | default $wave | quote }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    {{- include "app.labels" (dict "root" $) | nindent 4 }}
+spec:
+  replicas: {{ $c.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        {{- include "app.labels" (dict "root" $) | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: {{ $c.image }}:{{ $c.tag }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $c.port }}
+          {{- with $c.env }}
+          env:
+            {{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            httpGet: {path: {{ $c.health }}, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: {path: {{ $c.health }}, port: http}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+    {{- if ne $c.path "/" }}
+    # Sub-path components get the prefix stripped, so the app sees /hello, not /api/hello.
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingressClassName }}
+  rules:
+    - host: {{ $.Values.host }}
+      http:
+        paths:
+          {{- if ne $c.path "/" }}
+          - path: {{ $c.path }}(/|$)(.*)
+            pathType: ImplementationSpecific
+          {{- else }}
+          - path: /
+            pathType: Prefix
+          {{- end }}
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: 80
+{{- $wave = add $wave 10 }}
+{{- end }}

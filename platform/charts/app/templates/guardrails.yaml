@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  hard:
+    {{- toYaml .Values.guardrails.quota | nindent 4 }}
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limits
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  limits:
+    - type: Container
+      {{- toYaml .Values.guardrails.limitRange | nindent 6 }}

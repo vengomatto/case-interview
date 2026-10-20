@@ -1,0 +1,5 @@
+apiVersion: v2
+name: app
+description: Golden-path chart. A team describes a service in one service.yaml; the platform renders everything else.
+type: application
+version: 0.1.0

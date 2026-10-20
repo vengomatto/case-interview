@@ -1,0 +1,37 @@
+# The golden path: one services/<name>/service.yaml = one fully provisioned service.
+# The git-files generator reads each service.yaml; the same file is also the Helm
+# values file for the platform chart. Onboarding a team = adding one folder.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/vengomatto/case-interview
+        revision: main
+        files:
+          - path: services/*/service.yaml
+  template:
+    metadata:
+      name: '{{.name}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/vengomatto/case-interview
+        targetRevision: main
+        path: platform/charts/app
+        helm:
+          valueFiles:
+            - '../../../services/{{.path.basename}}/service.yaml'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{.name}}'
+      syncPolicy:
+        automated: {prune: true, selfHeal: true}
+        syncOptions: [ServerSideApply=true]

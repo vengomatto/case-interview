@@ -1,0 +1,9 @@
+# Installs ArgoCD (pinned) and the root app. Everything after this is Git.
+#   kubectl apply -k bootstrap/ --server-side
+# Two-pass on a fresh cluster: the CRDs must exist before the root Application.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v2.14.11/manifests/install.yaml
