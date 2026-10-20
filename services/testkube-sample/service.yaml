@@ -7,7 +7,7 @@ host: testkube-sample.localhost
 components:
   api:
     image: ghcr.io/vengomatto/case-interview-api
-    tag: local            # CI proposes a PR that replaces this with the commit SHA
+    tag: f07472395fb8766389027bc6f313158fdf7f1ca9
     port: 8080
     path: /api            # served at http://<host>/api/*, prefix stripped before the app
     health: /hello
@@ -16,7 +16,7 @@ components:
       DB_PORT: "5432"
   web:
     image: ghcr.io/vengomatto/case-interview-web
-    tag: local
+    tag: f07472395fb8766389027bc6f313158fdf7f1ca9
     port: 4173
     path: /
     health: /
