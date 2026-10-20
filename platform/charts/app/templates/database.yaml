@@ -79,11 +79,18 @@ spec:
             - name: data
               mountPath: /var/lib/postgresql/data
   volumeClaimTemplates:
-    - metadata:
+    # apiVersion, kind, volumeMode and status are set explicitly on purpose: the API
+    # server fills them in, and if the chart omits them ArgoCD reports a permanent diff.
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: data
       spec:
         accessModes: ["ReadWriteOnce"]
+        volumeMode: Filesystem
         resources:
           requests:
             storage: {{ .Values.database.storage }}
+      status:
+        phase: Pending
 {{- end }}
