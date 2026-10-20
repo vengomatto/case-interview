@@ -1,0 +1,5 @@
+# Must be rejected: mutable tag.
+name: sample
+host: sample.localhost
+components:
+  api: {image: ghcr.io/example/api, tag: latest, port: 8080}

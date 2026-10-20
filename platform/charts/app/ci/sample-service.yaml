@@ -1,0 +1,6 @@
+name: sample
+host: sample.localhost
+components:
+  api: {image: ghcr.io/example/api, tag: abc123, port: 8080, path: /api, health: /hello}
+  web: {image: ghcr.io/example/web, tag: abc123, port: 80, path: /}
+database: {enabled: true}

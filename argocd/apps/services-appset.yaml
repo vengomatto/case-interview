@@ -1,6 +1,9 @@
-# The golden path: one services/<name>/service.yaml = one fully provisioned service.
-# The git-files generator reads each service.yaml; the same file is also the Helm
-# values file for the platform chart. Onboarding a team = adding one folder.
+# The golden path. One list entry = one service, registered by a reviewed PR here.
+# Each Application has two sources:
+#   1. the platform chart (this repo)
+#   2. the team's values file (the app repo, deploy/service.yaml), referenced as $values
+# So the platform owns HOW things run, the team owns WHAT runs, and values.schema.json
+# stops a team from overriding platform settings (quota, security context, ...).
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -10,11 +13,12 @@ spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
   generators:
-    - git:
-        repoURL: https://github.com/vengomatto/case-interview
-        revision: main
-        files:
-          - path: services/*/service.yaml
+    - list:
+        elements:
+          - name: testkube-sample
+            repoURL: https://github.com/vengomatto/testkube-samples
+            revision: main
+            valuesPath: deploy/service.yaml
   template:
     metadata:
       name: '{{.name}}'
@@ -22,13 +26,16 @@ spec:
         - resources-finalizer.argocd.argoproj.io
     spec:
       project: default
-      source:
-        repoURL: https://github.com/vengomatto/case-interview
-        targetRevision: main
-        path: platform/charts/app
-        helm:
-          valueFiles:
-            - '../../../services/{{.path.basename}}/service.yaml'
+      sources:
+        - repoURL: https://github.com/vengomatto/case-interview
+          targetRevision: main
+          path: platform/charts/app
+          helm:
+            valueFiles:
+              - '$values/{{.valuesPath}}'
+        - repoURL: '{{.repoURL}}'
+          targetRevision: '{{.revision}}'
+          ref: values
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{.name}}'

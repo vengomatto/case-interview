@@ -1,3 +1,4 @@
+{{- $p := include "platform.defaults" . | fromYaml }}
 {{- $wave := 20 }}
 {{- range $name, $c0 := .Values.components }}
 {{- $c := include "app.component" (dict "root" $ "c" $c0) | fromYaml }}
@@ -7,7 +8,7 @@ kind: Deployment
 metadata:
   name: {{ $name }}
   annotations:
-    argocd.argoproj.io/sync-wave: {{ $c.wave | default $wave | quote }}
+    argocd.argoproj.io/sync-wave: {{ $wave | quote }}
   labels:
     app.kubernetes.io/name: {{ $name }}
     {{- include "app.labels" (dict "root" $) | nindent 4 }}
@@ -25,7 +26,7 @@ spec:
       containers:
         - name: {{ $name }}
           image: {{ $c.image }}:{{ $c.tag }}
-          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          imagePullPolicy: {{ $p.imagePullPolicy }}
           ports:
             - name: http
               containerPort: {{ $c.port }}
@@ -79,7 +80,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     {{- end }}
 spec:
-  ingressClassName: {{ $.Values.ingressClassName }}
+  ingressClassName: {{ $p.ingressClassName }}
   rules:
     - host: {{ $.Values.host }}
       http:

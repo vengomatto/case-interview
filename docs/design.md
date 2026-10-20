@@ -15,10 +15,10 @@ The brief has three sentences of requirements. Each one hides a decision.
 
 | # | Requirement (from the brief) | What it really means | Design answer | Cost / risk |
 |---|---|---|---|---|
-| 1 | "The team ... are not familiar with [Kubernetes]" | The adoption surface is the product. Success = number of Kubernetes concepts a developer must learn. Target: zero. | One file per service (`services/<name>/service.yaml`): name, images, ports, paths. The platform chart renders everything else. | The chart is now a product: it needs an owner, versions and an escape hatch for teams that outgrow it. |
+| 1 | "The team ... are not familiar with [Kubernetes]" | The adoption surface is the product. Success = number of Kubernetes concepts a developer must learn. Target: zero. | One file per service (`deploy/service.yaml`, in the team's own repo): name, images, ports, paths. The platform chart renders everything else. | The chart is now a product: it needs an owner, versions and an escape hatch for teams that outgrow it. |
 | 2 | "create the required deployment tooling" | Deploy is a pipeline, not a command. It must be repeatable, auditable and reversible. | CI builds and never deploys. A deploy is a PR that changes image tags. ArgoCD pulls after merge. | Two moving parts (CI, ArgoCD) and a PR per release. Slower than `kubectl apply`, safer. |
 | 3 | "crafting a great developers' experience" | Fast feedback, and failures visible where the developer looks. | PostSync smoke test (hurl) per release, per-PR image build, same Dockerfiles for compose and cluster. | Smoke tests only cover what the team lists. They are not a test strategy. |
-| 4 | "all their work is available at ..." (implicit) | The app was not written for Kubernetes. Some defects are not deployment problems. | Fix the app where the defect is (see section 2), do not hide it with platform tricks. | The platform repo now carries a patched copy of the app. See section 6. |
+| 4 | "all their work is available at ..." (implicit) | The app was not written for Kubernetes. Some defects are not deployment problems. | Fix the app where the defect is (see section 2), as a visible commit in the app repo. | Upstream is not ours to push to, so we carry a copy. See section 6. |
 
 The requirement that decides the outcome is **#1**. The rest of the design follows from it.
 
@@ -44,32 +44,34 @@ Defect 4 is the interesting one. It is not a Kubernetes problem. No manifest can
 ## 3. Architecture
 
 ```
-developer --PR--> GitHub repo ---------------------------+
-                     |                                    |
-                     | push to main (app/** changed)      | PR merged (service.yaml changed)
-                     v                                    v
-              GitHub Actions                          ArgoCD (in cluster)
-              test, build multi-arch,                 pulls repo, renders chart,
-              push image :<sha>,                      applies, runs smoke test
-              open deploy PR  ------ review/merge --->
+  APP REPO (team)                                  PLATFORM REPO (platform team)
+  testkube-samples                                 case-interview
+  - code, Dockerfiles                              - kind/cluster.yaml, bootstrap/
+  - deploy/service.yaml  <--- values (team) ---+   - argocd/ (add-ons, service registry)
+  - CI                                         |   - platform/charts/app (+ schema)
+     | push to main                            |        |
+     v                                         |        v
+  build multi-arch, push :<sha>,               +-- ArgoCD (in cluster): chart + values
+  open deploy PR (bumps tags) --merge--------->     render, apply, PostSync smoke test
 ```
 
-1. **CI (push-based, builds only).** Test, build `linux/amd64` and `linux/arm64`, push `:<commit sha>`,
-   open a PR that bumps the tag. CI holds no cluster credential.
+1. **CI (push-based, builds only).** In the app repo: test, build `linux/amd64` and `linux/arm64`, push `:<commit sha>`,
+   open a PR that bumps the tag in `deploy/service.yaml`. CI holds no cluster credential and no cross-repo token.
 2. **CD (pull-based, ArgoCD).** The cluster pulls. Drift is corrected automatically (`selfHeal`).
-3. **Golden path.** An `ApplicationSet` (git files generator) reads `services/*/service.yaml`.
-   The same file is the Helm values file for `platform/charts/app`. Onboarding = one folder.
-4. **Platform add-ons are Git too.** `ingress-nginx` is an ArgoCD Application, not a
-   `kubectl apply` of a third-party URL.
-5. **Cluster as a manifest.** `kind/cluster.yaml` defines the cluster (name, node label,
-   host port). `bootstrap/` installs ArgoCD from a pinned kustomization.
+3. **Golden path.** An `ApplicationSet` lists services. Each Application has two sources: the platform chart
+   and the team's `deploy/service.yaml` (as `$values`). Onboarding = one reviewed PR to the list.
+4. **Platform owns the guardrails.** Quota, security context and ingress class are constants in the chart
+   (`_platform.tpl`), not values, and `values.schema.json` rejects unknown keys and `latest` tags.
+   CI proves it: `ci/bad-*.yaml` must fail `helm lint`.
+5. **Platform add-ons are Git too.** `ingress-nginx` is an ArgoCD Application, not a `kubectl apply` of a URL.
+6. **Cluster as a manifest.** `kind/cluster.yaml` defines the cluster. `bootstrap/` installs ArgoCD from a pinned kustomization.
 
 What a developer does:
 
 | Task | Developer action | Kubernetes concepts needed |
 |---|---|---|
 | Ship a code change | Merge to `main`, then merge the generated deploy PR | 0 |
-| Add a service | Add `services/<name>/service.yaml` | 0 (ports, paths, env) |
+| Add a service | Add `deploy/service.yaml` to the app repo, one PR to the registry | 0 (ports, paths, env) |
 | Add an env var | Edit `env:` in `service.yaml` | 0 |
 | See why a release failed | Open ArgoCD, read the smoke test log | 1 (a failed Job) |
 
@@ -87,6 +89,7 @@ Ordering is explicit instead of "hope the retry policy sorts it out".
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
 | Frontend to API | Relative `/api` + one Ingress host | Separate API host; runtime-rewriting sidecar | One host, no CORS, no runtime config. Needs a build-time change in the app (section 6). |
+| Where the values file lives | App repo, next to the code | Platform repo (`services/`); third "config" repo | Team owns its config, tag-bump PR stays in one repo. Cost: the platform no longer sees all values in one place, so the schema must bound them. A config repo is the "at scale" step. |
 | Abstraction | Helm chart + one values file | Raw manifests; Kustomize only; custom CLI | Native in ArgoCD, widely known, values file is a clean team interface. Cost: Go templates are unfriendly. |
 | Deploy trigger | PR that bumps tags | CI pushes to `main`; CI runs `kubectl` | A deploy is reviewable and revertable. No cluster credentials in CI. |
 | Database | StatefulSet + PVC | Operator (CloudNativePG); managed service | Honest for a demo. In production this is an ownership decision, not a technical one. |
@@ -120,8 +123,9 @@ Note: kind's default CNI enforces NetworkPolicy. Verify on your version (runbook
 
 | Item | Status | Why |
 |---|---|---|
-| Frontend patch lives in this repo (`app/`) | Compromise | I cannot push to `recoord/testkube-samples`. In a real engagement the fix goes upstream and `app/` disappears. See `app/PATCHES.md`. |
-| Single repo for app and platform | Compromise | The ideal is separate repos (app / desired state). One repo keeps the MVP small. CI path filters prevent loops. |
+| Frontend patch lives in a copy of upstream | Compromise | I cannot push to `recoord/testkube-samples`. The patch is one commit on top of upstream `a21ed43`, easy to send upstream. |
+| Schema is the only bound on team values | Partial | It stops overriding platform settings, not bad business values (wrong port, huge replicas within the cap). Policy as code (Kyverno) is the second layer. |
+| App CI cannot lint against the platform chart | Gap | That needs a cross-repo token. The platform repo tests the chart with fixtures instead; a real fix is a published, versioned chart. |
 | Cluster creation | Manifest, not controller | `kind/cluster.yaml` is declarative, but `kind create cluster` is still a command. A fully declarative cluster (Cluster API, Crossplane) needs a management cluster that already exists. The chicken-and-egg problem moves, it does not disappear. |
 | Private registry pull | Not solved | CI pushes to private GHCR. A real cluster needs an `imagePullSecret` or public packages. Locally I load images into the node. |
 | Secrets | Demo credentials in the chart | Use External Secrets or Sealed Secrets. Same as upstream `docker-compose.yaml`. |
@@ -137,7 +141,7 @@ Note: kind's default CNI enforces NetworkPolicy. Verify on your version (runbook
 1. **Preview environments per PR**: `ApplicationSet` PR generator, one namespace per PR, TTL for abandoned ones.
 2. **Secrets**: External Secrets or Sealed Secrets.
 3. **Policy as code**: Kyverno forbids `latest`, requires limits and labels. Today these are conventions.
-4. **Chart versioning**: publish the chart, pin a version per service, so a platform change does not hit every team at once.
+4. **Chart versioning**: publish the chart, pin a version per service, so a platform change does not hit every team at once. It also lets the app repo lint against the exact chart version.
 5. **Progressive delivery**: Argo Rollouts with an AnalysisTemplate on error rate.
 6. **Service catalog**: from "folder per service" to real self-service (Backstage).
 

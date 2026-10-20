@@ -1,0 +1,6 @@
+# Must be rejected: a team tries to raise its own quota.
+name: sample
+host: sample.localhost
+components:
+  api: {image: ghcr.io/example/api, tag: abc123, port: 8080}
+guardrails: {quota: {requests.cpu: "100"}}

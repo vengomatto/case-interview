@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "host", "components"],
+  "properties": {
+    "name": {"type": "string", "pattern": "^[a-z]([-a-z0-9]{0,40}[a-z0-9])?$"},
+    "host": {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"},
+    "components": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[a-z]([-a-z0-9]{0,30}[a-z0-9])?$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["image", "tag", "port"],
+        "properties": {
+          "image": {"type": "string", "pattern": "^[a-z0-9./_-]+$"},
+          "tag": {"type": "string", "minLength": 1, "not": {"const": "latest"}},
+          "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "path": {"type": "string", "pattern": "^/[a-z0-9/_-]*$"},
+          "health": {"type": "string", "pattern": "^/"},
+          "replicas": {"type": "integer", "minimum": 1, "maximum": 5},
+          "env": {"type": "object", "additionalProperties": {"type": "string"}},
+          "resources": {"type": "object"}
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "name": {"type": "string"},
+        "user": {"type": "string"},
+        "password": {"type": "string"},
+        "storage": {"type": "string", "pattern": "^[0-9]+(Mi|Gi)$"}
+      }
+    },
+    "smoke": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["component", "path", "contains"],
+        "properties": {
+          "component": {"type": "string"},
+          "path": {"type": "string", "pattern": "^/"},
+          "contains": {"type": "string"}
+        }
+      }
+    }
+  }
+}

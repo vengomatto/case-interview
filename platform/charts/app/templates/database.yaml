@@ -51,7 +51,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: {{ .Values.database.image }}
+          image: {{ (include "platform.defaults" . | fromYaml).databaseImage }}
           ports:
             - name: postgres
               containerPort: 5432

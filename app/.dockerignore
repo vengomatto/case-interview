@@ -1,7 +1,0 @@
-cypress
-dist
-node_modules
-**/node_modules/**
-
-.eslintrc.cjs
-cypress.config.cjs

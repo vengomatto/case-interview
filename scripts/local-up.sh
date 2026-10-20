@@ -5,8 +5,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CLUSTER=case-interview
-SERVICE=services/testkube-sample/service.yaml
-REPO_URL=https://github.com/vengomatto/case-interview
+# The app lives in its own repo (sibling clone by default).
+APP_DIR=${APP_DIR:-$(cd .. && pwd)/testkube-samples}
+SERVICE=$APP_DIR/deploy/service.yaml
+GH_OWNER=https://github.com/vengomatto
+[ -f "$SERVICE" ] || { echo "missing $SERVICE (set APP_DIR)"; exit 1; }
 
 echo "==> 1. Cluster from kind/cluster.yaml"
 if kind get clusters 2>/dev/null | grep -qx "$CLUSTER"; then
@@ -22,7 +25,7 @@ echo "==> 2. Build images with the tag that Git declares, load them into the nod
 for c in api web; do
   image=$(awk -v c="$c" '$1==c":"{f=1} f&&$1=="image:"{print $2; exit}' "$SERVICE")
   tag=$(awk -v c="$c" '$1==c":"{f=1} f&&$1=="tag:"{print $2; exit}' "$SERVICE")
-  docker build -q -t "$image:$tag" -f "app/apps/$c/Dockerfile" app
+  docker build -q -t "$image:$tag" -f "$APP_DIR/apps/$c/Dockerfile" "$APP_DIR"
   kind load docker-image "$image:$tag" --name "$CLUSTER"
 done
 
@@ -31,12 +34,13 @@ kubectl apply -k bootstrap/ --server-side --force-conflicts >/dev/null
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 kubectl -n argocd rollout status deploy/argocd-applicationset-controller --timeout=300s
 
-echo "==> 4. Repo credential (private repo; not stored in Git)"
-kubectl -n argocd create secret generic repo-case-interview \
-  --from-literal=type=git --from-literal=url="$REPO_URL" \
+echo "==> 4. Repo credential template (private repos; not stored in Git)"
+# One credential for every repo under the owner URL prefix: platform repo and app repos.
+kubectl -n argocd create secret generic repo-creds-vengomatto \
+  --from-literal=type=git --from-literal=url="$GH_OWNER" \
   --from-literal=username=vengomatto --from-literal=password="$(gh auth token)" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-kubectl -n argocd label secret repo-case-interview argocd.argoproj.io/secret-type=repository --overwrite >/dev/null
+kubectl -n argocd label secret repo-creds-vengomatto argocd.argoproj.io/secret-type=repo-creds --overwrite >/dev/null
 
 echo "==> 5. Root app (the only manual apply)"
 kubectl apply -f argocd/root-app.yaml

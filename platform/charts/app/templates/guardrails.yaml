@@ -1,3 +1,4 @@
+{{- $p := include "platform.defaults" . | fromYaml }}
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -6,7 +7,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "-5"
 spec:
   hard:
-    {{- toYaml .Values.guardrails.quota | nindent 4 }}
+    {{- toYaml $p.guardrails.quota | nindent 4 }}
 ---
 apiVersion: v1
 kind: LimitRange
@@ -17,4 +18,4 @@ metadata:
 spec:
   limits:
     - type: Container
-      {{- toYaml .Values.guardrails.limitRange | nindent 6 }}
+      {{- toYaml $p.guardrails.limitRange | nindent 6 }}
