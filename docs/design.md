@@ -127,7 +127,8 @@ Note: kind's default CNI enforces NetworkPolicy. Verify on your version (runbook
 | Schema is the only bound on team values | Partial | It stops overriding platform settings, not bad business values (wrong port, huge replicas within the cap). Policy as code (Kyverno) is the second layer. |
 | App CI cannot lint against the platform chart | Gap | That needs a cross-repo token. The platform repo tests the chart with fixtures instead; a real fix is a published, versioned chart. |
 | Cluster creation | Manifest, not controller | `kind/cluster.yaml` is declarative, but `kind create cluster` is still a command. A fully declarative cluster (Cluster API, Crossplane) needs a management cluster that already exists. The chicken-and-egg problem moves, it does not disappear. |
-| Private registry pull | Not solved | CI pushes to private GHCR. A real cluster needs an `imagePullSecret` or public packages. Locally I load images into the node. |
+| Private registry pull | Partly solved | CI pushes to private GHCR; the chart references an `imagePullSecret` (`ghcr-pull`). The secret is created by the bootstrap script from a personal token, after ArgoCD creates the namespace, so the first pods show `ImagePullBackOff` for a minute and then heal. Accepted for the MVP. In production: a replicated secret (Kyverno `generate`), External Secrets, or node-level registry credentials (IAM on ECR). Then the step disappears. |
+| Credentials in the local cluster | Over-privileged | The bootstrap script copies the `gh` OAuth token (`repo`, `workflow`, `read:packages`, ...) into two Secrets (ArgoCD repo credential, image pull secret). Acceptable for a local, throwaway kind cluster. Real setups: a read-only deploy key or GitHub App for ArgoCD, node IAM or a read-only token for pulls. |
 | Secrets | Demo credentials in the chart | Use External Secrets or Sealed Secrets. Same as upstream `docker-compose.yaml`. |
 | PR preview environments | Not done | Out of scope for an MVP. First item in future work. |
 | Canary / Argo Rollouts | Not done | A stateless sample with no traffic. It would be theatre. |
@@ -139,7 +140,7 @@ Note: kind's default CNI enforces NetworkPolicy. Verify on your version (runbook
 ## 7. Future work (ordered by value/cost)
 
 1. **Preview environments per PR**: `ApplicationSet` PR generator, one namespace per PR, TTL for abandoned ones.
-2. **Secrets**: External Secrets or Sealed Secrets.
+2. **Secrets**: External Secrets or Sealed Secrets. Includes the registry pull secret: replicate one source secret into labelled namespaces (Reflector or Kyverno `generate`), which removes the manual step and the first `ImagePullBackOff`.
 3. **Policy as code**: Kyverno forbids `latest`, requires limits and labels. Today these are conventions.
 4. **Chart versioning**: publish the chart, pin a version per service, so a platform change does not hit every team at once. It also lets the app repo lint against the exact chart version.
 5. **Progressive delivery**: Argo Rollouts with an AnalysisTemplate on error rate.

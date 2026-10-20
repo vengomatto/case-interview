@@ -29,16 +29,22 @@ kind create cluster --config kind/cluster.yaml
 `kind/cluster.yaml` sets the cluster name, the `ingress-ready` node label and the host port
 mapping `8088 -> 80`. Port 8088 needs no root on macOS.
 
-### 2. Images
+### 2. Images: built by CI, pulled from GHCR
 
-```bash
-docker build -t ghcr.io/vengomatto/testkube-samples-api:local -f ../testkube-samples/apps/api/Dockerfile ../testkube-samples
-docker build -t ghcr.io/vengomatto/testkube-samples-web:local -f ../testkube-samples/apps/web/Dockerfile ../testkube-samples
-kind load docker-image <image> --name case-interview
-```
+You build nothing locally. The sequence before the first run:
 
-This replaces CI plus a registry for the local run. The tag matches `deploy/service.yaml` in the app repo,
-so ArgoCD cannot tell the difference.
+1. Push the app repo to `main`. The workflow tests, builds `amd64` + `arm64` images and pushes `ghcr.io/vengomatto/testkube-samples-{api,web}:<sha>`.
+2. The last job opens a `chore(deploy)` PR that replaces `tag: unreleased` with the SHA. Merge it.
+3. `local-up.sh` refuses to continue while the tag is `unreleased`.
+
+The cluster pulls from private GHCR, so it needs an `imagePullSecret` (`ghcr-pull`) built from
+`gh auth token` (scope `read:packages`: `gh auth refresh -h github.com -s read:packages`).
+The secret is never committed, and it can only be created after ArgoCD creates the namespace.
+So the script creates it last (step 6) and **accepts a short `ImagePullBackOff`**: the kubelet
+retries with backoff (max 5 minutes) and the pods heal once the secret exists. ArgoCD shows the
+app as Progressing or Degraded in the meantime. This is cosmetic; do not retry the sync.
+
+On Apple Silicon, kind pulls the `arm64` half of the manifest list. This is the multi-arch build working.
 
 ### 3. ArgoCD
 
@@ -57,7 +63,7 @@ The script creates a `repo-creds` Secret in `argocd` from `gh auth token`, valid
 kubectl apply -f argocd/root-app.yaml
 ```
 
-From here Git is the source of truth. The root app creates `ingress-nginx` and the
+From here Git is the source of truth. Releasing = merging a deploy PR. The root app creates `ingress-nginx` and the
 `services` ApplicationSet, which creates one Application per list entry (chart from this repo, values from the app repo).
 
 ---
@@ -111,5 +117,6 @@ Sync waves are ignored, so the api may restart once while the db starts.
 | Step | Status | Evidence |
 |---|---|---|
 | `helm lint` + `helm template` | Done | 0 failures; valid fixture renders; `bad-override-guardrail` and `bad-latest-tag` are rejected |
-| Images build (api 510 MB, web 1.4 GB) | Done | Run as uid 1000; web bundle contains `"/api"`, no `localhost:8080` |
+| Images build locally (api 510 MB, web 1.4 GB) | Done | Run as uid 1000; web bundle contains `"/api"`, no `localhost:8080` |
+| CI build, push to GHCR, deploy PR | **Not done yet** | Needs the app repo pushed and Actions allowed to create PRs |
 | Cluster, ArgoCD, end-to-end | **Not done yet** | Needs the app repo created and pushed (`vengomatto/testkube-samples`) |

@@ -56,5 +56,5 @@ team can set (`platform/charts/app/values.schema.json`).
 | Assumption | Consequence if wrong |
 |---|---|
 | The web image is built with a relative API base (`/api`) | Upstream hardcodes `http://localhost:8080`; the patch is a commit in the app repo, not upstream |
-| Images are private on GHCR | A real cluster needs an `imagePullSecret`; locally images are loaded into kind |
+| Images are private on GHCR | The cluster needs an `imagePullSecret` (`ghcr-pull`); the script creates it from `gh auth token`, which needs the `read:packages` scope |
 | Both repos are private | ArgoCD needs a credential (the script creates a `repo-creds` Secret from `gh auth token`) |

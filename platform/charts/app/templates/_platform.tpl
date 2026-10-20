@@ -6,6 +6,7 @@ change cannot be a value. values.schema.json rejects unknown keys.
 {{- define "platform.defaults" -}}
 ingressClassName: nginx
 imagePullPolicy: IfNotPresent
+pullSecret: ghcr-pull     # created out of band (never in Git); see scripts/local-up.sh
 databaseImage: postgres:16-alpine
 componentDefaults:
   replicas: 2

@@ -23,6 +23,8 @@ spec:
         app.kubernetes.io/name: {{ $name }}
         {{- include "app.labels" (dict "root" $) | nindent 8 }}
     spec:
+      imagePullSecrets:
+        - name: {{ $p.pullSecret }}
       containers:
         - name: {{ $name }}
           image: {{ $c.image }}:{{ $c.tag }}
