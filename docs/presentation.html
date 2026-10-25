@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golden Path to Kubernetes</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eceff4; --text: #172033; --muted: #556176; --line: #d6dce6;
+    --accent: #2457d6;
+    --dev: #a85d00; --dev-bg: #fdf0d9;
+    --gh: #1d58c9; --gh-bg: #e1ebff;
+    --argo: #6a3fc4; --argo-bg: #ece4fb;
+    --k8s: #0f7a43; --k8s-bg: #dff3e8;
+    --built: #0f7a43; --built-bg: #dff3e8;
+    --designed: #1d58c9; --designed-bg: #e1ebff;
+    --explore: #9a5b00; --explore-bg: #fdecc8;
+    --code-bg: #101826; --code-text: #e6edf7; --code-key: #8ab4ff; --code-str: #9be2b0; --code-com: #7d8aa0;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d121a; --surface: #151c27; --surface-2: #1c2533; --text: #e8edf5; --muted: #9aa7ba; --line: #2a3445;
+      --accent: #7aa2ff;
+      --dev: #f0b45a; --dev-bg: #3a2a10;
+      --gh: #8fb0ff; --gh-bg: #14264b;
+      --argo: #b99cf5; --argo-bg: #2a1d4a;
+      --k8s: #5fd391; --k8s-bg: #123424;
+      --built: #5fd391; --built-bg: #123424;
+      --designed: #8fb0ff; --designed-bg: #14264b;
+      --explore: #f2c26b; --explore-bg: #3a2c0f;
+      --code-bg: #0a0f17;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-snap-type: y proximity; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .slide { min-height: 100vh; scroll-snap-align: start; padding: 48px 16px; display: flex; flex-direction: column; justify-content: center; }
+  .inner { width: 100%; max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.5rem, 3.2vw, 2.2rem); line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  .lede { color: var(--muted); font-size: 1.15rem; max-width: 62ch; margin: 0 0 28px; }
+  .tag { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em; }
+  .built { color: var(--built); background: var(--built-bg); }
+  .designed { color: var(--designed); background: var(--designed-bg); }
+  .explore { color: var(--explore); background: var(--explore-bg); }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 0.86em; }
+  pre { margin: 0; padding: 18px 20px; border-radius: var(--radius); background: var(--code-bg); color: var(--code-text);
+    font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-x: auto; }
+  .k { color: var(--code-key); } .s { color: var(--code-str); } .c { color: var(--code-com); }
+  .two { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+  ul.big { margin: 0; padding-left: 22px; } ul.big li { margin: 8px 0; }
+
+  /* ---------- flows ---------- */
+  .lane { margin: 0 0 18px; }
+  .lane-title { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.08em; }
+  .steps { display: grid; gap: 14px; }
+  .steps.c5 { grid-template-columns: repeat(5, 1fr); }
+  .steps.c4 { grid-template-columns: repeat(4, 1fr); }
+  .steps.c3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 980px) { .steps.c5, .steps.c4, .steps.c3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .steps.c5, .steps.c4, .steps.c3 { grid-template-columns: 1fr; } }
+  .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-top: 5px solid var(--c);
+    border-radius: 12px; padding: 12px 14px 14px; min-height: 124px; }
+  .step .who { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c); }
+  .step .n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #fff;
+    font-size: 0.8rem; font-weight: 800; margin-right: 6px; }
+  .step b { display: block; font-size: 1.02rem; margin: 6px 0 2px; }
+  .step span.d { color: var(--muted); font-size: 0.9rem; display: block; }
+  .step .time { position: absolute; right: 10px; top: 10px; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+  .step:not(:last-child)::after { content: "\2192"; position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 1.1rem; z-index: 2; background: var(--bg); line-height: 1; padding: 0 1px; }
+  @media (max-width: 980px) { .step::after { display: none; } }
+  .dev { --c: var(--dev); } .gh { --c: var(--gh); } .argo { --c: var(--argo); } .k8s { --c: var(--k8s); }
+  .human { background: var(--dev-bg); }
+  .gate { border-style: dashed; border-top-style: solid; }
+  .then { text-align: center; color: var(--muted); margin: 2px 0 10px; font-size: 0.95rem; }
+  .notes { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 16px; color: var(--muted); font-size: 0.98rem; }
+  .notes b { color: var(--text); }
+  .key { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 16px; font-size: 0.85rem; color: var(--muted); }
+  .key i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+
+  /* ---------- environments ---------- */
+  .envs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .envs { grid-template-columns: 1fr; } }
+  .env h3 { font-size: 1.2rem; }
+  .env .q { color: var(--muted); font-style: italic; margin: 0 0 8px; }
+  .callout { margin-top: 20px; padding: 16px 20px; border-left: 6px solid var(--accent); background: var(--surface); border-radius: 10px; font-size: 1.1rem; }
+  .opts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+  @media (max-width: 980px) { .opts { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
+  .opt { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 0.94rem; }
+  .opt.pick { border: 2px solid var(--accent); }
+  .opt b { display: block; margin-bottom: 4px; }
+
+  /* ---------- kpi ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi .num { font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+  .kpi .lab { color: var(--muted); }
+  .bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; margin: 14px 0 6px; font-size: 0.72rem; font-weight: 700; color: #fff; }
+  .bar div { display: grid; place-items: center; white-space: nowrap; }
+  .barkey { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); }
+
+  .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 980px) { .cols { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .cols { grid-template-columns: 1fr; } }
+  .cols ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.98rem; }
+  .red { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 980px) { .red { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .red { grid-template-columns: 1fr; } }
+  .red .card { font-size: 0.95rem; } .red b { display: block; margin-bottom: 4px; }
+  footer { padding: 24px 16px 48px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+  .hint { position: fixed; right: 14px; bottom: 12px; font-size: 0.78rem; color: var(--muted); background: var(--surface);
+    border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; opacity: 0.9; }
+  @media print { .hint { display: none; } .slide { min-height: auto; page-break-after: always; } }
+</style>
+</head>
+<body>
+
+<!-- 1 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h1>Deploy to Kubernetes<br>without learning Kubernetes</h1>
+  <p class="lede">A golden path for a team that has never used Kubernetes: one file in the team's repository, a pipeline that
+  builds and verifies, a pull request that releases, and a platform that owns everything else.</p>
+  <div class="legend">
+    <span class="tag built">Works today: runs and was verified</span>
+    <span class="tag designed">Planned: specified, not built</span>
+    <span class="tag explore">To explore: needs a spike first</span>
+  </div>
+</div></section>
+
+<!-- 2 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>The team owns one file</h2>
+  <p class="lede">The setup form creates it from five answers; the team edits it later. Names, images, ports and paths: no Deployments, probes, quotas or network rules.</p>
+  <div class="two" style="grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)">
+<pre><span class="c"># deploy/service.yaml  (in the team's own repo)</span>
+<span class="k">name</span>: testkube-sample
+<span class="k">host</span>: testkube-sample.localhost
+<span class="k">components</span>:
+  <span class="k">api</span>: {image: ghcr.io/org/api, tag: <span class="s">&lt;set by CI&gt;</span>, port: 8080, path: /api}
+  <span class="k">web</span>: {image: ghcr.io/org/web, tag: <span class="s">&lt;set by CI&gt;</span>, port: 4173, path: /}
+<span class="k">database</span>: {enabled: true}
+<span class="k">smoke</span>:
+  - {component: api, path: /hello-pg, contains: <span class="s">"hello world"</span>}</pre>
+    <div class="card">
+      <h3>The platform turns it into about 20 objects</h3>
+      <ul class="big">
+        <li>Namespace, quota, network rules</li>
+        <li>Deployments, Services, Ingress</li>
+        <li>Database with storage</li>
+        <li>A smoke test after every release</li>
+      </ul>
+      <p style="margin:12px 0 0;color:var(--muted)">A schema rejects anything outside the contract, and teams cannot override the platform's settings.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- assumptions ------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>What we assumed</h2>
+  <p class="lede">Most of these come with the brief. Each one is written down so nobody has to guess.</p>
+  <div class="cols" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><b>The brief</b><ul>
+      <li>Kubernetes is required.</li>
+      <li>The team does not know it, and should not have to.</li>
+      <li>A local cluster stands in for a cloud cluster.</li></ul></div>
+    <div class="card"><b>The services</b><ul>
+      <li>Web applications with a Dockerfile, one port and a health URL.</li>
+      <li>Postgres is the only database: in the cluster here, as the sample does, and managed in production. The application creates its own schema when it starts.</li>
+      <li>GitHub holds the code and runs the pipeline.</li></ul></div>
+    <div class="card"><b>The people and the plan</b><ul>
+      <li>Developers use GitHub and a browser, not kubectl.</li>
+      <li>Everything lives in Git: changes are reviewed and revertable, and the screens only show.</li>
+      <li>One team starts; a platform team owns the chart.</li>
+      <li>Separate concerns: product teams own what runs, the platform owns how it runs. The file and the pull request flow are the stable contract between them.</li>
+      <li>Security starts with a baseline (non-root, limits, network rules) and grows after the first deploy.</li></ul></div>
+  </div>
+</div></section>
+
+<!-- creating a service, today ---------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>Creating a service today <span class="tag built">Works today</span></h2>
+  <p class="lede">The steps that created <code>hello-service</code> from the template. The platform repository is involved once: its pull request is what creates the service's namespace.</p>
+  <div class="key">
+    <span class="dev"><i></i>Developer</span><span class="gh"><i></i>GitHub</span>
+    <span class="argo"><i></i>Argo CD</span><span class="k8s"><i></i>Cluster</span>
+  </div>
+  <div class="lane">
+    <p class="lane-title">In the new service's repository</p>
+    <div class="steps c5">
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">1</span>Create the repository</b><span class="d">One click on the template</span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">2</span>Run the Setup form</b><span class="d">Name, port, path, health check, database</span></div>
+      <div class="step gh"><span class="who">GitHub Actions</span><b><span class="n">3</span>Writes the service file</b><span class="d">Checks the values and commits <code>deploy/service.yaml</code></span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">4</span>Applies two settings</b><span class="d">Two commands the form prints, once</span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">5</span>Pushes the application</b><span class="d">Code and Dockerfile; the first release runs by itself</span></div>
+    </div>
+  </div>
+  <p class="then">after the first release</p>
+  <div class="lane">
+    <p class="lane-title">In the platform repository and the cluster</p>
+    <div class="steps c5">
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">6</span>Opens the registration pull request</b><span class="d">One entry in the list of services</span></div>
+      <div class="step dev human gate"><span class="who">Platform team</span><b><span class="n">7</span>Reviews and merges it</b><span class="d">The platform decides who gets a namespace</span></div>
+      <div class="step argo"><span class="who">Argo CD</span><b><span class="n">8</span>Creates the service</b><span class="d">Namespace, quota, network rules, database, deployments, ingress</span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">9</span>Creates the pull secret</b><span class="d">One command, demo cluster only</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><b><span class="n">10</span>The service is live</b><span class="d">Smoke test passes; the URL answers</span></div>
+    </div>
+  </div>
+  <div class="notes">
+    <span><b>By hand today:</b> steps 1, 2, 4, 5, 6 and 9.</span>
+    <span><b>Why 7 is a person today:</b> capacity, ownership and naming need a decision. In production the decision becomes automated checks.</span>
+  </div>
+</div></section>
+
+<!-- 3 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>Releasing a change today <span class="tag built">Works today</span></h2>
+  <p class="lede">Two human steps. Everything else is automatic.</p>
+  <div class="key">
+    <span class="dev"><i></i>Developer</span><span class="gh"><i></i>GitHub</span>
+    <span class="argo"><i></i>Argo CD</span><span class="k8s"><i></i>Cluster</span>
+  </div>
+
+  <div class="lane">
+    <p class="lane-title">Build and release</p>
+    <div class="steps c5">
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">1</span>Open a PR</b><span class="d">From a branch</span></div>
+      <div class="step gh"><span class="who">GitHub Actions</span><span class="time">~3 min</span><b><span class="n">2</span>PR run</b><span class="d">Tests, builds both images, pushes nothing</span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">3</span>Merge</b><span class="d">To main</span></div>
+      <div class="step gh"><span class="who">GitHub Actions</span><span class="time">3-7 min</span><b><span class="n">4</span>Build and publish</b><span class="d">amd64 and arm64 images, tagged with the commit</span></div>
+      <div class="step gh"><span class="who">GitHub Actions</span><span class="time">30 s</span><b><span class="n">5</span>Verify and release</b><span class="d">Checks both architectures, opens and merges the deploy PR, comments how to roll back</span></div>
+    </div>
+  </div>
+  <p class="then">then Argo CD takes over</p>
+  <div class="lane">
+    <p class="lane-title">Deploy</p>
+    <div class="steps c4">
+      <div class="step argo"><span class="who">Argo CD</span><span class="time">&le; 3 min</span><b><span class="n">6</span>Notices the merge</b><span class="d">Polls Git every 3 minutes</span></div>
+      <div class="step argo"><span class="who">Argo CD</span><b><span class="n">7</span>Syncs in order</b><span class="d">Database, api, web, ingress</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><span class="time">1-2 min</span><b><span class="n">8</span>Pulls and starts</b><span class="d">Images from the registry</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><span class="time">10 s</span><b><span class="n">9</span>Smoke test</b><span class="d">3 requests pass, then Healthy</span></div>
+    </div>
+  </div>
+  <div class="notes">
+    <span><b>Roll back:</b> click Revert on the deploy PR</span>
+    <span><b>Measured from main:</b> 11 minutes to a verified release (CI 7, Argo CD poll 3, rollout 1)</span>
+    <span><b>Run end to end</b> from a branch and from a real merge to main</span>
+  </div>
+</div></section>
+
+<!-- creating a service, production ------------------------------------ -->
+<section class="slide"><div class="inner">
+  <h2>Creating a service in production <span class="tag designed">Planned</span></h2>
+  <p class="lede">The same journey, with nobody in the way. Automation creates the repository, opens the registration pull request, and merges it when the checks the platform wrote all pass.</p>
+  <div class="key">
+    <span class="dev"><i></i>Developer or platform team</span><span class="gh"><i></i>GitHub</span>
+    <span class="argo"><i></i>Argo CD</span><span class="k8s"><i></i>Cluster</span>
+  </div>
+  <div class="lane">
+    <p class="lane-title">One request from the developer</p>
+    <div class="steps c4">
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">1</span>Asks for a service</b><span class="d">One form: name, team, port, path</span></div>
+      <div class="step gh"><span class="who">Automation (GitHub App)</span><b><span class="n">2</span>Creates and sets up the repository</b><span class="d">From the template, with settings and access applied</span></div>
+      <div class="step gh"><span class="who">Automation (GitHub App)</span><b><span class="n">3</span>Opens the registration pull request</b><span class="d">One entry in the list of services, as a draft</span></div>
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">4</span>Pushes the application</b><span class="d">The first release runs by itself</span></div>
+    </div>
+  </div>
+  <p class="then">then the platform team approves</p>
+  <div class="lane">
+    <p class="lane-title">Platform repository and cluster</p>
+    <div class="steps c4">
+      <div class="step gh gate"><span class="who">Platform rules (automated)</span><b><span class="n">5</span>Checks the pull request and merges it</b><span class="d">Name free and allowed, owner known, file valid, within budget. A failed check leaves it for a person</span></div>
+      <div class="step argo"><span class="who">Argo CD</span><b><span class="n">6</span>Creates the service</b><span class="d">Namespace, quota, network rules, database, ingress, and a cloud role for the service</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><b><span class="n">7</span>Pulls the image</b><span class="d">The nodes read the registry with their cloud role: no pull secret</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><b><span class="n">8</span>The service is live</b><span class="d">Smoke test passes; previews are available</span></div>
+    </div>
+  </div>
+  <div class="notes">
+    <span><b>No person is needed</b> unless a check fails. The platform team owns the rules, not each approval.</span>
+    <span><b>Needs:</b> an organization, a GitHub App, required checks on the platform repository, and a registry the nodes can read (ECR on AWS).</span>
+  </div>
+</div></section>
+
+<!-- releasing a change, production ------------------------------------ -->
+<section class="slide"><div class="inner">
+  <h2>Releasing a change in production <span class="tag designed">Planned</span> <span class="tag explore">To explore</span></h2>
+  <p class="lede">The service is already registered, so a release never needs a platform pull request. A merged change reaches production directly. The safety comes from the preview before the merge, a rolling update, a smoke test and a one-click revert.</p>
+  <div class="key">
+    <span class="dev"><i></i>Developer or reviewer</span><span class="gh"><i></i>GitHub</span>
+    <span class="argo"><i></i>Argo CD</span><span class="k8s"><i></i>Cluster</span>
+  </div>
+  <div class="lane">
+    <p class="lane-title">Before merge, a preview per branch: does this change work? <span class="tag explore">To explore</span></p>
+    <div class="steps c4">
+      <div class="step dev human"><span class="who">Developer</span><b><span class="n">1</span>Labels the pull request</b><span class="d">Or pushes a branch named <code>preview/my-idea</code></span></div>
+      <div class="step gh"><span class="who">GitHub Actions</span><b><span class="n">2</span>Builds the branch</b><span class="d">An image for that commit</span></div>
+      <div class="step argo"><span class="who">Argo CD</span><b><span class="n">3</span>Creates the preview</b><span class="d">Own namespace, URL and database with sample data</span></div>
+      <div class="step dev human"><span class="who">Reviewer</span><b><span class="n">4</span>Opens the running change</b><span class="d">Closing the pull request deletes it</span></div>
+    </div>
+  </div>
+  <div class="lane">
+    <p class="lane-title">After merge, straight to production: the same image that was built once <span class="tag built">Works today</span></p>
+    <div class="steps c4">
+      <div class="step gh"><span class="who">GitHub Actions</span><b><span class="n">5</span>Builds and verifies the image</b><span class="d">Both processor types; the pull request review before the merge was the approval</span></div>
+      <div class="step argo"><span class="who">Argo CD</span><b><span class="n">6</span>Deploys to production</b><span class="d">Rolling update: old copies keep serving until the new ones are ready</span></div>
+      <div class="step k8s"><span class="who">Cluster</span><b><span class="n">7</span>Smoke test</b><span class="d">The release is Healthy, or it is flagged as failed</span></div>
+      <div class="step gh"><span class="who">Anyone</span><b><span class="n">8</span>Rolls back if needed</b><span class="d">Clicks Revert on the release pull request</span></div>
+    </div>
+  </div>
+  <div class="notes">
+    <span><b>No staging:</b> the preview answers "does it work", the smoke test and the revert limit the damage.</span>
+    <span><b>A canary</b> (a small share of traffic first) would be the in-production safeguard, and it needs metrics we do not have yet.</span>
+  </div>
+</div></section>
+
+<!-- 5 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>Environments: our position</h2>
+  <p class="lede">Today there is one environment; the target is two, and they are enough here. A preview answers "does this change work" before the merge. Production is reached directly after it, with a revert one click away.</p>
+  <div class="envs" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card env"><span class="tag explore">Many, short-lived</span><h3>Preview</h3><p class="q">Does this change work?</p>
+      <ul class="big"><li>One per branch or pull request</li><li>Own URL and data</li><li>Gone when the work ends</li></ul></div>
+    <div class="card env"><span class="tag built">One</span><h3>Production</h3><p class="q">Real users.</p>
+      <ul class="big"><li>Reached after the merge, by the same pipeline</li><li>Rolling update and a smoke test</li><li>Revert to roll back</li></ul></div>
+  </div>
+  <div class="callout"><b>Without a staging, canaries matter more.</b> A staging and a canary answer the same question, "is the merged result safe?": the first before production, the second inside it. A canary needs real traffic and per-version metrics, so it is the next investment once those exist, not something we have.</div>
+  <div class="opts">
+    <div class="opt pick"><b>A. Previews and production</b>Simple, fast, one clear path. <i>Our position.</i></div>
+    <div class="opt"><b>B. Add a shared staging</b>For risky database migrations, many services, or a required sign-off before production.</div>
+    <div class="opt"><b>C. A dedicated staging cluster</b>Also to rehearse platform upgrades. A second cluster, DNS and data to run.</div>
+    <div class="opt"><b>D. Canary in production</b>Replaces much of a staging. Needs metrics and traffic.</div>
+  </div>
+</div></section>
+
+<!-- 6 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>When something is red: no kubectl <span class="tag built">Works today</span></h2>
+  <p class="lede">The developer answers three questions: what failed, where, and what to do. In GitHub and the Argo CD screen.</p>
+  <div class="red">
+    <div class="card"><b>1. Pipeline red?</b>Open the failing step: test, build or verify images.</div>
+    <div class="card"><b>2. Deploy PR open?</b>The repository wants an approval. Approve and merge it.</div>
+    <div class="card"><b>3. Not Synced?</b>Argo CD shows the chart or values error on the application.</div>
+    <div class="card"><b>4. Not Healthy?</b>Click the red pod: the Logs and Events tabs say why.</div>
+    <div class="card"><b>5. Smoke test red?</b>The job log names the failing request. Roll back.</div>
+  </div>
+  <div class="notes">
+    <span><b>Seen here:</b> a crash on a read-only folder, a 404 caused by an earlier step not being ready, a permanent "out of sync".</span>
+    <span><b>Missing:</b> a read-only role for developers, logs that survive a crashed pod, alerts.</span>
+  </div>
+</div></section>
+
+<!-- 7 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>How we measure the experience</h2>
+  <p class="lede">The KPI is <b>time to first deploy</b>: a new engineer clones the template, names the app, pushes the code, and the service answers.</p>
+  <div class="kpis">
+    <div class="card kpi"><div class="num">30 min</div><div class="lab">Target, wall-clock, pipeline wait included</div></div>
+    <div class="card kpi"><div class="num">&lt; 10 min</div><div class="lab">Target, the engineer's own hands-on time</div></div>
+    <div class="card kpi"><div class="num">11 min</div><div class="lab">Measured today: push to a verified release, cold web build</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <b>Where the time goes (measured from main; hands-on is an estimate)</b>
+    <div class="bar">
+      <div style="width:44%;background:var(--gh)">CI 7.2 min</div>
+      <div style="width:18%;background:var(--argo)">Argo CD poll 2.9 min</div>
+      <div style="width:7%;background:var(--k8s)">Rollout 1</div>
+      <div style="width:31%;background:var(--dev)">Hands-on ~5 min</div>
+    </div>
+    <div class="barkey"><span>Measured from main: CI 7.2 min (3.2 warm), Argo CD poll 175 s, rollout and smoke test 59 s</span><span>Estimated: hands-on time</span><span>Not measured: hands-on time by someone who does not know the platform</span></div>
+  </div>
+  <div class="notes"><span><b>Also tracked:</b> lead time for change, change failure rate, time to restore, deployments per week.</span></div>
+</div></section>
+
+<!-- 8 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>What is next</h2>
+  <p class="lede">In this order, with previews as the focus.</p>
+  <div class="cols" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><span class="tag designed">Next</span><ul><li>A newcomer tries the template and times it</li><li>Read-only developer view in Argo CD</li><li>Pin the chart per service</li></ul></div>
+    <div class="card"><span class="tag explore">To explore</span><ul><li>Preview environments from branches</li><li>Secrets store, policy engine</li></ul></div>
+    <div class="card"><span class="tag designed">Later</span><ul><li>Canary releases (more relevant without a staging)</li><li>A shared staging, if the risk grows</li><li>Image updates by Image Updater or Kargo</li></ul></div>
+  </div>
+</div></section>
+
+<!-- 9 --------------------------------------------------------------- -->
+<section class="slide"><div class="inner">
+  <h2>Known limits, stated up front</h2>
+  <div class="two" style="align-items:start">
+    <div class="card"><ul class="big">
+      <li>One environment only. Previews are designed; a staging is not planned.</li>
+      <li>Creating a service has manual steps: the repository settings, the registration pull request and the image pull secret.</li>
+      <li>Rollback, self-healing and a failed release follow from the design and the runbook but were not demonstrated live. NetworkPolicy enforcement on kind is unverified.</li>
+      <li>Previews are described one service at a time. Testing several services together is an open question.</li>
+      <li>The demo copies a personal token into the cluster. A real setup uses a GitHub App, a secret store and per-service IAM roles.</li>
+    </ul></div>
+    <div class="card"><ul class="big">
+      <li>Security and robustness come after the first deploy, with a plan: scanning, signing, policy, backups.</li>
+      <li>The sample app has findings of its own (hardcoded database password, no health endpoint). They go back to its team.</li>
+      <li>The next screen lists the documents behind these slides, in reading order.</li>
+    </ul></div>
+  </div>
+</div></section>
+
+<!-- reading order ------------------------------------------------------ -->
+<section class="slide"><div class="inner">
+  <h2>Where to read next</h2>
+  <p class="lede">The documents in the <code>docs/</code> folder, in the order to read them. Each goes deeper than the one before.</p>
+  <div class="steps c4">
+    <div class="step gh"><span class="who">Same story, in text</span><b><span class="n">1</span>walkthrough.md</b><span class="d">Assumptions, both journeys, trade-offs, improvements. Start here for the reasoning without the slides.</span></div>
+    <div class="step gh"><span class="who">The reference</span><b><span class="n">2</span>design.md</b><span class="d">The critical analysis, the measurements, the map from this MVP to a real setup (previews, staging, canaries included), and a comparison with common Argo CD practice.</span></div>
+    <div class="step gh"><span class="who">Why not X?</span><b><span class="n">3</span>alternatives.md</b><span class="d">The options not chosen: a developer portal such as Backstage, orchestrators, no Kubernetes, Flux, virtual clusters.</span></div>
+    <div class="step gh"><span class="who">To run it</span><b><span class="n">4</span>runbook.md</b><span class="d">Bootstrap the cluster, add a service, roll back, publish the repositories. Read before you touch anything.</span></div>
+  </div>
+  <p class="then">and the three repositories</p>
+  <div class="cols" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><b>case-interview</b> (the platform)<ul><li>Start at <code>platform/charts/app</code>: the chart and its schema</li><li>Then <code>argocd/</code>: the service list and add-ons</li><li><code>kind/</code> and <code>bootstrap/</code>: the cluster</li></ul></div>
+    <div class="card"><b>testkube-samples</b> (a service)<ul><li>Start at <code>deploy/service.yaml</code>: the only file the team owns</li><li>Then <code>.github/workflows/deploy.yaml</code>: the release pipeline</li></ul></div>
+    <div class="card"><b>service-template</b> (a new service)<ul><li>Start at <code>README.md</code>: four steps</li><li>Then <code>.github/workflows/setup-service.yaml</code>: the form</li></ul></div>
+  </div>
+</div></section>
+
+<footer>Use the arrow keys or the space bar to move between screens.</footer>
+<div class="hint">&darr; / &uarr; or space</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    function current() {
+      var y = window.scrollY + window.innerHeight / 3, idx = 0;
+      slides.forEach(function (s, i) { if (s.offsetTop <= y) idx = i; });
+      return idx;
+    }
+    document.addEventListener('keydown', function (e) {
+      var i = current();
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); if (slides[i + 1]) slides[i + 1].scrollIntoView(); }
+      if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); if (slides[i - 1]) slides[i - 1].scrollIntoView(); }
+    });
+  })();
+</script>
+</body>
+</html>
