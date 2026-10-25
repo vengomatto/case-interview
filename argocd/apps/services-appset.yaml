@@ -19,6 +19,10 @@ spec:
             repoURL: https://github.com/vengomatto/testkube-samples
             revision: main
             valuesPath: deploy/service.yaml
+          - name: hello-service
+            repoURL: https://github.com/vengomatto/hello-service
+            revision: main
+            valuesPath: deploy/service.yaml
   template:
     metadata:
       name: '{{.name}}'
