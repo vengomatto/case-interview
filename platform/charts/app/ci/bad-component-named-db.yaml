@@ -1,0 +1,5 @@
+# Must be rejected: "db" collides with the Service and the network policy of the database.
+name: sample
+host: sample.localhost
+components:
+  db: {image: ghcr.io/example/db, tag: abc123, port: 8080}

@@ -1,0 +1,5 @@
+# Must be rejected: "/api/" renders an ingress rule that never matches.
+name: sample
+host: sample.localhost
+components:
+  api: {image: ghcr.io/example/api, tag: abc123, port: 8080, path: /api/}
