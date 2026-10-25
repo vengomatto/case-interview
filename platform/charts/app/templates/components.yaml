@@ -27,7 +27,7 @@ spec:
         - name: {{ $p.pullSecret }}
       containers:
         - name: {{ $name }}
-          image: {{ $c.image }}:{{ $c.tag }}
+          image: {{ printf "%s:%s" $c.image $c.tag | quote }}
           imagePullPolicy: {{ $p.imagePullPolicy }}
           ports:
             - name: http
@@ -35,16 +35,16 @@ spec:
           {{- with $c.env }}
           env:
             {{- range $k, $v := . }}
-            - name: {{ $k }}
+            - name: {{ $k | quote }}
               value: {{ $v | quote }}
             {{- end }}
           {{- end }}
           livenessProbe:
-            httpGet: {path: {{ $c.health }}, port: http}
+            httpGet: {path: {{ $c.health | quote }}, port: http}
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
-            httpGet: {path: {{ $c.health }}, port: http}
+            httpGet: {path: {{ $c.health | quote }}, port: http}
             initialDelaySeconds: 3
             periodSeconds: 5
           resources:

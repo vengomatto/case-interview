@@ -1,5 +1,9 @@
 name: ci
 
+# Least privilege: the jobs only read the repository.
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:

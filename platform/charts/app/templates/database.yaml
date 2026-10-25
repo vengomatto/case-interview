@@ -7,9 +7,9 @@ metadata:
     argocd.argoproj.io/sync-wave: "10"
 type: Opaque
 stringData:
-  POSTGRES_DB: {{ .Values.database.name }}
-  POSTGRES_USER: {{ .Values.database.user }}
-  POSTGRES_PASSWORD: {{ .Values.database.password }}
+  POSTGRES_DB: {{ .Values.database.name | quote }}
+  POSTGRES_USER: {{ .Values.database.user | quote }}
+  POSTGRES_PASSWORD: {{ .Values.database.password | quote }}
 ---
 apiVersion: v1
 kind: Service

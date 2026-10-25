@@ -1,0 +1,8 @@
+# Must be rejected: a tag that carries a line break and extra container fields.
+name: sample
+host: sample.localhost
+components:
+  api:
+    image: ghcr.io/example/api
+    tag: "v1\n          command: [sh, -c, id]"
+    port: 8080

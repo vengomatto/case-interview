@@ -42,3 +42,7 @@ spec:
       syncPolicy:
         automated: {prune: true, selfHeal: true}
         syncOptions: [ServerSideApply=true]
+        # A release whose smoke test fails during a cold start is tried again before it is reported as failed.
+        retry:
+          limit: 3
+          backoff: {duration: 30s, factor: 2, maxDuration: 5m}
