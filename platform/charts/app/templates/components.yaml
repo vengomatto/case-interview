@@ -69,6 +69,22 @@ spec:
     - name: http
       port: 80
       targetPort: http
+{{- if gt (int $c.replicas) 1 }}
+---
+# Node drains and upgrades evict one pod at a time, so a component with replicas keeps serving.
+# maxUnavailable (not minAvailable) so a drain can never deadlock on a single-replica component.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
