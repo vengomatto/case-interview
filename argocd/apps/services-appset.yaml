@@ -23,6 +23,10 @@ spec:
             repoURL: https://github.com/vengomatto/hello-service
             revision: main
             valuesPath: deploy/service.yaml
+          - name: aaabbb
+            repoURL: https://github.com/vengomatto/aaa_bbb
+            revision: main
+            valuesPath: deploy/service.yaml
   template:
     metadata:
       name: '{{.name}}'
